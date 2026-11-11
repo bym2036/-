@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎉 배영민 님을 위한 디지털 롤링페이퍼</title>
+
+  <!-- 폰트: Pretendard -->
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Canvas Confetti CDN (폭죽 효과) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', 'sans-serif'],
+          },
+          colors: {
+            paper: {
+              yellow: '#FEF08A',
+              pink: '#FBCFE8',
+              blue: '#BAE6FD',
+              green: '#BBF7D0',
+              purple: '#E9D5FF',
+              orange: '#FED7AA'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #fbf9f5;
+      background-image: radial-gradient(#e5e1d8 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .sticky-note {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .sticky-note:hover {
+      transform: translateY(-6px) scale(1.02) !important;
+      box-shadow: 4px 14px 24px rgba(0, 0, 0, 0.14);
+      z-index: 10;
+    }
+
+    /* 마스킹 테이프 효과 */
+    .tape {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 24px;
+      background-color: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(2px);
+      border-left: 2px dashed rgba(0, 0, 0, 0.1);
+      border-right: 2px dashed rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+  <!-- =============================== -->
+  <!-- 1. 헤더 영역                    -->
+  <!-- =============================== -->
+  <header class="w-full bg-white/80 backdrop-blur-md border-b border-amber-100 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-rose-400 flex items-center justify-center text-2xl shadow-md shadow-amber-200">
+          💌
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            배영민 롤링페이퍼
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">Public</span>
+          </h1>
+          <p class="text-xs text-slate-500">따뜻한 축하와 응원의 메시지를 남겨주세요!</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- URL 복사 버튼 -->
+        <button id="btnShare" onclick="copyShareLink()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+          링크 복사
+        </button>
+        <!-- 글쓰기 모달 열기 버튼 -->
+        <button onclick="openModal()"
+          class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 rounded-xl shadow-md shadow-rose-200 transition-all hover:shadow-lg active:scale-95">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          메모 남기기
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =============================== -->
+  <!-- 2. 알림 & 안내 배너             -->
+  <!-- =============================== -->
+  <main class="max-w-6xl w-full mx-auto px-4 py-8 flex-grow">
+
+    <!-- Supabase 미설정 경고 안내 배너 -->
+    <div id="setupAlert" class="hidden mb-8 p-5 bg-amber-50 border-2 border-amber-300 rounded-2xl shadow-sm">
+      <div class="flex items-start gap-3">
+        <span class="text-2xl">⚙️</span>
+        <div>
+          <h3 class="font-bold text-amber-900 text-base">Supabase 연동 키 설정이 필요합니다</h3>
+          <p class="text-sm text-amber-800 mt-1">
+            아직 Supabase URL과 Key가 연결되지 않았습니다. <code
+              class="bg-amber-200/70 px-1.5 py-0.5 rounded font-mono text-xs">index.html</code> 파일 상단의
+            <strong>SUPABASE_URL</strong>과 <strong>SUPABASE_ANON_KEY</strong> 값을 입력해주세요.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 대문 히어로 섹션 -->
+    <div class="text-center my-6 sm:my-10">
+      <div
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold mb-3">
+        <span>✨ 누구나 자유롭게 남기는 공간</span>
+      </div>
+      <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        소중한 마음을 전해주세요 💕
+      </h2>
+      <p class="text-slate-600 text-sm sm:text-base mt-2 max-w-lg mx-auto">
+        축하, 감사, 응원 등 나누고 싶은 따뜻한 이야기를 메모지에 적어 벽면에 붙여주세요.
+      </p>
+
+      <!-- 카운터 -->
+      <div class="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500 font-medium">
+        <span>현재 모인 마음:</span>
+        <span id="memoCountBadge"
+          class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+          0개
+        </span>
+      </div>
+    </div>
+
+    <!-- 로딩 상태 표시 -->
+    <div id="loadingIndicator" class="flex flex-col items-center justify-center py-20 text-slate-400">
+      <div class="w-10 h-10 border-4 border-amber-300 border-t-rose-500 rounded-full animate-spin"></div>
+      <p class="text-sm mt-3 font-medium">따뜻한 메모들을 불러오는 중...</p>
+    </div>
+
+    <!-- 비어있을 때 표시 -->
+    <div id="emptyState"
+      class="hidden text-center py-20 bg-white/50 border-2 border-dashed border-slate-200 rounded-3xl p-8 max-w-md mx-auto">
+      <div class="text-5xl mb-3">📝</div>
+      <h3 class="text-lg font-bold text-slate-700">아직 작성된 메모가 없어요</h3>
+      <p class="text-sm text-slate-500 mt-1 mb-5">첫 번째 메모의 주인공이 되어보세요!</p>
+      <button onclick="openModal()"
+        class="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-medium text-sm rounded-xl shadow transition">
+        첫 메모 남기러 가기
+      </button>
+    </div>
+
+    <!-- =============================== -->
+    <!-- 3. 롤링페이퍼 카드 보드         -->
+    <!-- =============================== -->
+    <div id="memoGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-4">
+      <!-- 자바스크립트로 카드가 동적 생성됩니다 -->
+    </div>
+  </main>
+
+  <!-- =============================== -->
+  <!-- 4. 메모 작성 모달 (Popup Form)   -->
+  <!-- =============================== -->
+  <div id="memoModal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
+    <div
+      class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 transform transition-transform">
+      <!-- 모달 헤더 -->
+      <div
+        class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50 to-rose-50">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">✍️</span>
+          <h3 class="font-bold text-slate-900 text-lg">메모 남기기</h3>
+        </div>
+        <button onclick="closeModal()"
+          class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 모달 폼 -->
+      <form id="memoForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+        <!-- 닉네임 입력 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            보내는 사람 (닉네임 / 이름)
+          </label>
+          <input type="text" id="senderInput" required maxlength="20" placeholder="예: 영민의 찐팬, 팀원 김철수"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 transition">
+        </div>
+
+        <!-- 스티커 / 이모지 선택 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            스티커 선택
+          </label>
+          <div class="grid grid-cols-6 gap-2" id="emojiSelector">
+            <button type="button" onclick="selectEmoji('🎉')"
+              class="emoji-btn text-xl p-2 rounded-xl border-2 border-rose-400 bg-rose-50 text-center transition">🎉</button>
+            <button type="button" onclick="selectEmoji('💖')"
+              class="emoji-btn text-xl p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-center transition">💖</button>
+            <button type="button" onclick="selectEmoji('👏')"
+              class="emoji-btn text-xl p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-center transition">👏</button>
+            <button type="button" onclick="selectEmoji('🍀')"
+              class="emoji-btn text-xl p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-center transition">🍀</button>
+            <button type="button" onclick="selectEmoji('🎂')"
+              class="emoji-btn text-xl p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-center transition">🎂</button>
+            <button type="button" onclick="selectEmoji('🌟')"
+              class="emoji-btn text-xl p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-center transition">🌟</button>
+          </div>
+          <input type="hidden" id="selectedEmoji" value="🎉">
+        </div>
+
+        <!-- 메모지 색상 선택 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            메모지 색상
+          </label>
+          <div class="flex items-center gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="yellow" checked class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-amber-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="pink" class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-pink-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="blue" class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-sky-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="green" class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-emerald-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="purple" class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-purple-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="colorOption" value="orange" class="peer sr-only">
+              <div
+                class="w-8 h-8 rounded-full bg-orange-200 border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition shadow-sm">
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 메시지 내용 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            메시지 내용
+          </label>
+          <textarea id="contentInput" required rows="4" maxlength="400" placeholder="전하고 싶은 이야기를 자유롭게 작성해주세요 (최대 400자)"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 transition resize-none"></textarea>
+        </div>
+
+        <!-- 버튼 영역 -->
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal()"
+            class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+            취소
+          </button>
+          <button type="submit" id="submitBtn"
+            class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 shadow-md shadow-rose-200 transition-all active:scale-95 flex items-center gap-1.5">
+            <span>메모 붙이기 📌</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 토스트 알림창 -->
+  <div id="toast"
+    class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/90 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-medium z-50 flex items-center gap-2 hidden transition-all">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">알림 내용</span>
+  </div>
+
+  <!-- 푸터 -->
+  <footer class="mt-16 py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 bg-white/40">
+    <p>디지털 롤링페이퍼 &copy; 2026. Made with ❤️ for 배영민</p>
+  </footer>
+
+  <!-- =============================== -->
+  <!-- 5. 자바스크립트 로직            -->
+  <!-- =============================== -->
+  <script>
+    // ========================================================
+    // [중요] 아래 Supabase 정보를 본인 프로젝트의 정보로 변경하세요!
+    // ========================================================
+    const SUPABASE_URL = 'https://djslhcyhddbzggcdxbeq.supabase.co/rest/v1/';
+    const SUPABASE_ANON_KEY = 'sb_publishable_HdjtqvrHDUVcy6PyxV7OjQ_XIfJliru';
+    // ========================================================
+
+    let supabaseClient = null;
+    let isConfigured = false;
+
+    // Supabase 설정 확인 및 초기화
+    function initSupabase() {
+      if (SUPABASE_URL.includes('YOUR_PROJECT_ID') || SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY')) {
+        document.getElementById('setupAlert').classList.remove('hidden');
+        document.getElementById('loadingIndicator').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        console.warn('Supabase 키가 설정되지 않았습니다.');
+        return false;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        isConfigured = true;
+        return true;
+      } catch (err) {
+        console.error('Supabase 클라이언트 초기화 실패:', err);
+        return false;
+      }
+    }
+
+    // 메모 불러오기
+    async function fetchMemos() {
+      if (!isConfigured) return;
+
+      const loading = document.getElementById('loadingIndicator');
+      const emptyState = document.getElementById('emptyState');
+      const grid = document.getElementById('memoGrid');
+      const countBadge = document.getElementById('memoCountBadge');
+
+      loading.classList.remove('hidden');
+      grid.innerHTML = '';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('rolling_papers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        loading.classList.add('hidden');
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          emptyState.classList.remove('hidden');
+          countBadge.textContent = '0개';
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        countBadge.textContent = `${data.length}개`;
+
+        // 카드 렌더링
+        data.forEach((item, index) => {
+          const card = createMemoCard(item, index);
+          grid.appendChild(card);
+        });
+
+      } catch (err) {
+        loading.classList.add('hidden');
+        console.error('메모 로드 에러:', err);
+        showToast('❌ 데이터를 불러오지 못했습니다: ' + (err.message || '설정을 확인해주세요.'));
+      }
+    }
+
+    // 색상 매핑
+    const colorClasses = {
+      yellow: 'bg-amber-100 border-amber-300 text-amber-950',
+      pink: 'bg-pink-100 border-pink-300 text-pink-950',
+      blue: 'bg-sky-100 border-sky-300 text-sky-950',
+      green: 'bg-emerald-100 border-emerald-300 text-emerald-950',
+      purple: 'bg-purple-100 border-purple-300 text-purple-950',
+      orange: 'bg-orange-100 border-orange-300 text-orange-950'
+    };
+
+    // 회전 각도 (자연스러운 포스트잇 느낌을 위해 -2deg ~ 2deg 적용)
+    const rotations = ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2', 'rotate-0'];
+
+    // 메모 카드 엘리먼트 생성
+    function createMemoCard(memo, index) {
+      const colorClass = colorClasses[memo.color] || colorClasses.yellow;
+      const rotationClass = rotations[index % rotations.length];
+
+      const createdDate = new Date(memo.created_at);
+      const dateStr = createdDate.toLocaleDateString('ko-KR', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const div = document.createElement('div');
+      div.className = `sticky-note relative p-5 pt-7 rounded-2xl border ${colorClass} ${rotationClass} flex flex-col justify-between min-h-[200px] break-words shadow-sm`;
+
+      div.innerHTML = `
+        <div class="tape"></div>
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-2xl">${escapeHtml(memo.emoji || '🎉')}</span>
+            <span class="text-[11px] opacity-60 font-medium">${dateStr}</span>
+          </div>
+          <p class="text-sm font-medium leading-relaxed whitespace-pre-wrap">${escapeHtml(memo.content)}</p>
+        </div>
+        <div class="mt-4 pt-3 border-t border-black/10 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-800">From. ${escapeHtml(memo.sender)}</span>
+          <span class="text-[10px] opacity-50">#${memo.id}</span>
+        </div>
+      `;
+
+      return div;
+    }
+
+    // HTML 태그 이스케이프 (XSS 방지)
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 폼 제출 이벤트
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      if (!isConfigured) {
+        showToast('⚠️ Supabase URL과 Key를 먼저 설정해주세요!');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const sender = document.getElementById('senderInput').value.trim();
+      const content = document.getElementById('contentInput').value.trim();
+      const emoji = document.getElementById('selectedEmoji').value;
+      const color = document.querySelector('input[name="colorOption"]:checked')?.value || 'yellow';
+
+      if (!sender || !content) {
+        showToast('보내는 사람과 메시지를 모두 입력해주세요.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>저장 중...</span>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('rolling_papers')
+          .insert([
+            { sender, content, emoji, color }
+          ])
+          .select();
+
+        if (error) throw error;
+
+        // 성공 폭죽 효과!
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
+        showToast('🎉 메시지가 성공적으로 등록되었습니다!');
+        closeModal();
+        document.getElementById('memoForm').reset();
+        selectEmoji('🎉');
+
+        // 새로고침
+        fetchMemos();
+
+      } catch (err) {
+        console.error('메모 등록 에러:', err);
+        showToast('❌ 저장 실패: ' + (err.message || '오류가 발생했습니다.'));
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>메모 붙이기 📌</span>';
+      }
+    }
+
+    // 이모지 선택 처리
+    function selectEmoji(emoji) {
+      document.getElementById('selectedEmoji').value = emoji;
+      const buttons = document.querySelectorAll('.emoji-btn');
+      buttons.forEach(btn => {
+        if (btn.textContent.trim() === emoji) {
+          btn.classList.add('border-rose-400', 'bg-rose-50', 'border-2');
+          btn.classList.remove('border-slate-200');
+        } else {
+          btn.classList.remove('border-rose-400', 'bg-rose-50', 'border-2');
+          btn.classList.add('border-slate-200');
+        }
+      });
+    }
+
+    // 모달 제어
+    function openModal() {
+      const modal = document.getElementById('memoModal');
+      modal.classList.remove('hidden');
+      document.getElementById('senderInput').focus();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('memoModal');
+      modal.classList.add('hidden');
+    }
+
+    // 링크 복사
+    function copyShareLink() {
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('📋 링크가 클립보드에 복사되었습니다! 친구들에게 공유해보세요.');
+      }).catch(() => {
+        showToast('링크 복사에 실패했습니다. 브라우저 주소창을 복사해주세요.');
+      });
+    }
+
+    // 토스트 팝업
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.textContent = msg;
+
+      toast.classList.remove('hidden');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    // 초기 실행
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      if (initSupabase()) {
+        fetchMemos();
+      }
+    });
+  </script>
+</body>
+
+</html>
